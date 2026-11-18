@@ -18,6 +18,15 @@ def _ids(raw: str | None, *, title: str) -> frozenset[int]:
     return frozenset(values)
 
 
+def _usernames(raw: str | None) -> frozenset[str]:
+    values: set[str] = set()
+    for part in (raw or "").replace(";", ",").split(","):
+        name = part.strip().lstrip("@").casefold()
+        if name:
+            values.add(name)
+    return frozenset(values)
+
+
 def _optional_int(raw: str | None, *, title: str) -> int | None:
     text = (raw or "").strip()
     if not text:
@@ -42,10 +51,12 @@ class Config:
     response_time: str
     privacy_url: str
     curator_tz: str
+    admin_usernames: frozenset[str] = frozenset()
     state_ttl_seconds: int = 24 * 60 * 60
 
-    def role_of(self, user_id: int) -> str | None:
-        if user_id in self.admin_ids:
+    def role_of(self, user_id: int, username: str | None = None) -> str | None:
+        name = (username or "").strip().lstrip("@").casefold()
+        if user_id in self.admin_ids or (name and name in self.admin_usernames):
             return "admin"
         if user_id in self.operator_ids:
             return "operator"
@@ -70,6 +81,7 @@ def load_config() -> Config:
         ),
         admin_ids=_ids(os.environ.get("ADMIN_IDS"), title="ADMIN_IDS"),
         operator_ids=_ids(os.environ.get("OPERATOR_IDS"), title="OPERATOR_IDS"),
+        admin_usernames=_usernames(os.environ.get("ADMIN_USERNAMES")),
         operator_name=os.environ.get("OPERATOR_NAME", "").strip(),
         operator_inn=os.environ.get("OPERATOR_INN", "").strip(),
         operator_email=os.environ.get("OPERATOR_EMAIL", "").strip(),

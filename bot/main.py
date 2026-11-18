@@ -25,7 +25,11 @@ class RoleMiddleware(BaseMiddleware):
 
     async def __call__(self, handler, event, data):
         user = getattr(event, "from_user", None)
-        data["staff_role"] = self.config.role_of(user.id) if user is not None else None
+        data["staff_role"] = (
+            self.config.role_of(user.id, getattr(user, "username", None))
+            if user is not None
+            else None
+        )
         return await handler(event, data)
 
 
