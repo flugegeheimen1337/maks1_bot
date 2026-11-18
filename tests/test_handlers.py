@@ -189,3 +189,63 @@ async def test_withdrawal_erases_saved_application(env):
     assert await state.get_state() is None
     assert await state.get_data() == {}
     assert "удален" in message.answer.await_args.args[0]
+
+
+async def test_final_buttons_restart_and_collect_a_note(env):
+    database, state, config = env
+    await database.create_application(
+        session_id="done",
+        user_id=10,
+        username="nick",
+        full_name="Анна Иванова",
+        consent_at="2026-11-18T10:00:00Z",
+        answers=Answers(
+            problem="c_work",
+            free_text="текст",
+            therapy_exp="e_first",
+            format="f_offline",
+            tz="—",
+            budget="p0",
+            slots=["t_day"],
+        ),
+        reply_in_chat=False,
+    )
+    await state.set_state(Flow.done)
+    await state.set_data(
+        {
+            "screen": "S8",
+            "session_id": "done",
+            "answers": {},
+            "consent_at": "2026-11-18T10:00:00Z",
+            "prompt_message_id": 5,
+            "application_id": 1,
+        }
+    )
+    bot = AsyncMock()
+    bot.send_message = AsyncMock(return_value=SimpleNamespace(message_id=9))
+    add = AsyncMock()
+    add.data = "add_info"
+    add.from_user = _person()
+    add.message = _telegram_message()
+    add.answer = AsyncMock()
+    await on_callback(add, state, bot, database, config)
+    assert await state.get_state() == Flow.adding.state
+    prompt = bot.send_message.await_args.args[1]
+    assert "добавить" in prompt.casefold()
+
+    note = _user_message("Можно по субботам.")
+    await on_followup(note, state, bot, database, config)
+    notes = await database.list_supplements(1)
+    assert notes[-1].text == "Можно по субботам."
+    assert await state.get_state() == Flow.done.state
+
+    restart = AsyncMock()
+    restart.data = "restart"
+    restart.from_user = _person()
+    restart.message = _telegram_message(message_id=5)
+    restart.answer = AsyncMock()
+    await on_callback(restart, state, bot, database, config)
+    data = await state.get_data()
+    assert data["screen"] == "S0"
+    assert await state.get_state() == Flow.active.state
+    assert "Практика" in bot.edit_message_text.await_args.args[0]

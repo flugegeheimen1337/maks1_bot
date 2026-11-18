@@ -6,7 +6,7 @@ import logging
 from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import ErrorEvent, Message
+from aiogram.types import BotCommand, ErrorEvent, MenuButtonCommands, Message
 from redis.asyncio import Redis
 
 from bot.config import Config, load_config
@@ -90,6 +90,7 @@ async def run() -> None:
     bot = Bot(token=config.bot_token)
     dispatcher = build_dispatcher(config, storage)
     dispatcher["db"] = database
+    await configure_menu(bot)
     logger.info("Бот анкетирования запущен")
     try:
         await dispatcher.start_polling(bot)
@@ -97,6 +98,20 @@ async def run() -> None:
         await bot.session.close()
         await storage.close()
         await database.close()
+
+
+async def configure_menu(bot: Bot) -> None:
+    """Меню остаётся в пустом чате, когда историю переписки уже удалили."""
+    try:
+        await bot.set_my_commands(
+            [
+                BotCommand(command="start", description="Начать анкету"),
+                BotCommand(command="add", description="Добавить информацию"),
+            ]
+        )
+        await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+    except TelegramAPIError:
+        logger.exception("не удалось обновить меню команд")
 
 
 def main() -> None:

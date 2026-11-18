@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 class Flow(StatesGroup):
     active = State()
     done = State()
+    adding = State()
 
 
 def copy_settings(config: Config) -> CopySettings:

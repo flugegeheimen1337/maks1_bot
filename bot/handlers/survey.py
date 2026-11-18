@@ -3,14 +3,16 @@ from __future__ import annotations
 from uuid import uuid4
 
 from aiogram import Bot, F, Router
-from aiogram.filters import CommandStart, Filter, StateFilter
+from aiogram.filters import Command, CommandStart, Filter, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.config import Config
 from bot.db import Database
 from bot.domain import (
+    ADD_INFO_BUTTON,
     OUT_OF_FLOW,
+    RESTART_BUTTON,
     STALE_ALERT,
     Answers,
     apply,
@@ -65,6 +67,17 @@ async def cmd_start(message: Message, state: FSMContext, db: Database, config: C
     await db.track_screen(session_id, message.from_user.id, "S0")
 
 
+@router.message(Command("add"))
+async def cmd_add(message: Message, state: FSMContext, bot: Bot, db: Database) -> None:
+    if not _private(message):
+        return
+    assert message.from_user is not None
+    if await state.get_state() == Flow.active.state:
+        await message.answer("Сначала отправьте текущую анкету. Добавить информацию можно после неё.")
+        return
+    await _prompt_supplement(message, state, bot, db, message.from_user.id)
+
+
 @router.message(F.text.func(is_withdrawal))
 async def withdraw(message: Message, state: FSMContext, bot: Bot, db: Database, config: Config) -> None:
     if not _private(message):
@@ -97,6 +110,25 @@ async def on_callback(
 
     current = await state.get_state()
     data = await state.get_data()
+    if callback.data == "restart":
+        await callback.answer()
+        await _restart(
+            message,
+            state,
+            bot,
+            db,
+            config,
+            callback.from_user.id,
+            message_id=message.message_id,
+        )
+        return
+    if callback.data == "add_info":
+        if current == Flow.active.state:
+            await callback.answer(STALE_ALERT, show_alert=True)
+            return
+        await callback.answer()
+        await _prompt_supplement(message, state, bot, db, callback.from_user.id)
+        return
     if current != Flow.active.state or data.get("prompt_message_id") != message.message_id:
         await callback.answer(STALE_ALERT, show_alert=True)
         return
@@ -214,6 +246,55 @@ async def _submit(
         await message.answer(warning)
 
 
+async def _restart(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+    db: Database,
+    config: Config,
+    user_id: int,
+    message_id: int | None,
+) -> None:
+    session_id = uuid4().hex
+    await show_screen(
+        bot=bot,
+        chat_id=message.chat.id,
+        message_id=message_id,
+        state=state,
+        db=db,
+        config=config,
+        user_id=user_id,
+        session_id=session_id,
+        screen="S0",
+        answers=Answers(),
+        consent_at=None,
+        application_id=None,
+    )
+
+
+async def _prompt_supplement(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+    db: Database,
+    user_id: int,
+) -> None:
+    application = await db.latest_for_user(user_id)
+    if application is None:
+        await bot.send_message(
+            message.chat.id,
+            "Заявки пока нет. Нажмите «Начать снова» или отправьте /start.",
+        )
+        return
+    await state.set_state(Flow.adding)
+    await state.update_data(screen="S8", application_id=application.id)
+    await bot.send_message(
+        message.chat.id,
+        "Напишите, что хотите добавить или уточнить. "
+        "Следующее сообщение уйдёт куратору вместе с заявкой.",
+    )
+
+
 def _full_name(callback: CallbackQuery) -> str:
     user = callback.from_user
     if user is None:
@@ -260,7 +341,7 @@ class AfterSurvey(Filter):
         if (message.text or "").startswith("/"):
             return False
         current = await state.get_state()
-        return current in {None, Flow.done.state}
+        return current in {None, Flow.done.state, Flow.adding.state}
 
 
 @router.message(AfterSurvey())
@@ -270,6 +351,22 @@ async def on_followup(message: Message, state: FSMContext, bot: Bot, db: Databas
     assert message.from_user is not None
     current = await state.get_state()
     if current == Flow.active.state:
+        return
+    text = (message.text or "").strip()
+    if text.casefold() == RESTART_BUTTON.casefold():
+        data = await state.get_data()
+        await _restart(
+            message,
+            state,
+            bot,
+            db,
+            config,
+            message.from_user.id,
+            message_id=data.get("prompt_message_id"),
+        )
+        return
+    if text.casefold() == ADD_INFO_BUTTON.casefold():
+        await _prompt_supplement(message, state, bot, db, message.from_user.id)
         return
     application = await db.latest_for_user(message.from_user.id)
     if application is None:
@@ -288,6 +385,8 @@ async def on_followup(message: Message, state: FSMContext, bot: Bot, db: Databas
         copy_from_chat=None if copy_message_id is None else message.chat.id,
         copy_message_id=copy_message_id,
     )
+    if await state.get_state() == Flow.adding.state:
+        await state.set_state(Flow.done)
     if delivered:
         await message.answer("Передала это куратору как дополнение к заявке.")
     else:

@@ -207,6 +207,9 @@ def test_screens_and_keyboards():
     assert "ИНН" not in filled
     final = screen_text("S8", Answers(), settings)
     assert "В течение 24 часов" in final
+    final_buttons = [row[0] for row in keyboard_rows("S8", Answers())]
+    assert ("Добавить информацию", "add_info") in final_buttons
+    assert ("Начать снова", "restart") in final_buttons
 
     for screen in ("S1", "S2", "S3", "S4", "S4a", "S5", "S6"):
         rows = keyboard_rows(screen, _filled())

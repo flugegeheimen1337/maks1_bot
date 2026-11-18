@@ -11,8 +11,10 @@ NO_USERNAME = "нет никнейма"
 SKIPPED = "—"
 FREE_TEXT_LIMIT = 500
 WITHDRAWAL_PHRASE = "отзываю согласие"
-STALE_ALERT = "Эта анкета уже завершена. Отправьте /start, чтобы начать заново"
-OUT_OF_FLOW = "Чтобы начать подбор специалиста, отправьте /start"
+STALE_ALERT = "Эта анкета уже завершена. Нажмите «Начать снова» или отправьте /start"
+OUT_OF_FLOW = "Чтобы начать подбор специалиста, нажмите «Начать снова» или отправьте /start"
+RESTART_BUTTON = "Начать снова"
+ADD_INFO_BUTTON = "Добавить информацию"
 EMPTY_DONE_ALERT = "Выберите хотя бы один вариант"
 PAGE_SIZE = 5
 
@@ -492,6 +494,11 @@ def keyboard_rows(screen: str, answers: Answers) -> list[list[tuple[str, str]]]:
             [("Я добавил(а) никнейм", "recheck_username")],
             [("Отвечайте в этом чате", "submit_nochat")],
         ]
+    elif screen == "S8":
+        rows = [
+            [(ADD_INFO_BUTTON, "add_info")],
+            [(RESTART_BUTTON, "restart")],
+        ]
     else:
         rows = []
 
@@ -672,8 +679,9 @@ def screen_text(screen: str, answers: Answers, settings: CopySettings) -> str:
             "контакта со специалистом — скажите нам, подберём другого. "
             "Это нормальная часть процесса.\n"
             "\n"
-            "Если захотите что-то добавить или уточнить — просто "
-            "напишите в этот чат."
+            "Чтобы что-то добавить или уточнить, нажмите «Добавить информацию» "
+            "или просто напишите в этот чат.\n"
+            "Чтобы заполнить анкету ещё раз, нажмите «Начать снова»."
         )
     return ""
 
