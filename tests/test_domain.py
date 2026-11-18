@@ -195,6 +195,16 @@ def test_screens_and_keyboards():
     assert "здоровье" not in consent.casefold()
     assert "https://example.com/privacy" in consent
     assert "[ФИО]" in consent
+    assert "паспорт [номер]" in consent
+    filled = consent_text(
+        CopySettings(
+            operator_name="Иванов Иван Иванович",
+            operator_inn="0000 000000",
+            operator_email="mail@example.com",
+        )
+    )
+    assert "Оператор: Иванов Иван Иванович, паспорт 0000 000000, e-mail: mail@example.com." in filled
+    assert "ИНН" not in filled
     final = screen_text("S8", Answers(), settings)
     assert "В течение 24 часов" in final
 

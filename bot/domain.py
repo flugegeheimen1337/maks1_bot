@@ -511,9 +511,9 @@ class CopySettings:
 
 def operator_line(settings: CopySettings) -> str:
     name = settings.operator_name or "[ФИО]"
-    inn = settings.operator_inn or "[номер]"
+    passport = settings.operator_inn or "[номер]"
     email = settings.operator_email or "[почта]"
-    return f"{name}, ИНН {inn}, e-mail: {email}"
+    return f"{name}, паспорт {passport}, e-mail: {email}"
 
 
 def consent_text(settings: CopySettings) -> str:
