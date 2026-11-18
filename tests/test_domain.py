@@ -204,7 +204,11 @@ def test_screens_and_keyboards():
         )
     )
     assert "Оператор: Иванов Иван Иванович, паспорт 0000 000000, e-mail: mail@example.com." in filled
+    assert filled.count("mail@example.com") == 2
+    assert "или на mail@example.com." in filled
     assert "ИНН" not in filled
+    hours = screen_text("S8", Answers(), CopySettings(response_time="48 часов"))
+    assert "В течение 48 часов мы напишем вам" in hours
     final = screen_text("S8", Answers(), settings)
     assert "В течение 24 часов" in final
     final_buttons = [row[0] for row in keyboard_rows("S8", Answers())]

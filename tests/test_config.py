@@ -20,7 +20,7 @@ def test_roles_and_defaults(monkeypatch, tmp_path):
     assert config.role_of(9, "@Maxm_dm") == "admin"
     assert config.role_of(3, "maxm_dm") == "admin"
     assert config.applications_chat_id is None
-    assert config.response_time == "рабочего дня"
+    assert config.response_time == "48 часов"
     assert config.state_ttl_seconds == 24 * 60 * 60
 
 

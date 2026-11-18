@@ -512,7 +512,7 @@ class CopySettings:
     operator_name: str = ""
     operator_inn: str = ""
     operator_email: str = ""
-    response_time: str = "рабочего дня"
+    response_time: str = "48 часов"
     privacy_url: str = ""
 
 
@@ -668,7 +668,7 @@ def screen_text(screen: str, answers: Answers, settings: CopySettings) -> str:
             "прямо в этом чате."
         )
     if screen == "S8":
-        term = settings.response_time or "рабочего дня"
+        term = settings.response_time or "48 часов"
         return (
             "Готово, анкета у куратора.\n"
             "\n"

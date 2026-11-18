@@ -85,7 +85,7 @@ def load_config() -> Config:
         operator_name=os.environ.get("OPERATOR_NAME", "").strip(),
         operator_inn=os.environ.get("OPERATOR_INN", "").strip(),
         operator_email=os.environ.get("OPERATOR_EMAIL", "").strip(),
-        response_time=os.environ.get("RESPONSE_TIME", "рабочего дня").strip() or "рабочего дня",
+        response_time=os.environ.get("RESPONSE_TIME", "48 часов").strip() or "48 часов",
         privacy_url=os.environ.get("PRIVACY_URL", "").strip(),
         curator_tz=os.environ.get("CURATOR_TZ", "Europe/Moscow").strip() or "Europe/Moscow",
     )
